@@ -1,36 +1,40 @@
 from django.db import models
 from soft_delete_it.models import SoftDeleteModel
-from enum import Enum
 from django.contrib.auth.models import User
 
-class BillingOption(Enum):
+class BillingOption(object):
     EMAIL = 1
     MAIL_COPY = 2
     MAIL_ORIGINAL = 3
     FAX = 4
     UPLOAD_TO_SITE = 5
     
-    # @classmethod
-    # def choise(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.EMAIL, "Email"),
+            (cls.MAIL_COPY, "Mail Copy"),
+            (cls.MAIL_ORIGINAL, "Mail Original"),
+            (cls.FAX, "Fax"),
+            (cls.UPLOAD_TO_SITE, "Upload to site")
+        )
         
-class DebtorStatus(Enum):
+class DebtorStatus(object):
     PURCHASE = 1
     DO_NOT_PURCHASE = 2
        
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         (cls.value, cls.name) 
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.PURCHASE, "Good"), 
+            (cls.DO_NOT_PURCHASE, "No Load")
+        )
 
 class Debtor(SoftDeleteModel):
     debtor_id = models.AutoField(auto_created=True, primary_key=True)
     parent = models.ForeignKey('self', default=None, blank=True, null=True, on_delete = models.SET_NULL)
     name = models.CharField(max_length=255)
-    status = models.SmallIntegerField(choices=DebtorStatus, default=DebtorStatus.PURCHASE)
+    status = models.SmallIntegerField(choices=DebtorStatus.as_choices(), default=DebtorStatus.PURCHASE)
     docket = models.CharField(max_length=50, default=None, blank=True, null=True)
     dot_number = models.CharField(max_length=50, default=None, blank=True, null=True)
     address_1 = models.CharField(max_length=255, default=None, blank=True, null=True)
@@ -49,7 +53,7 @@ class Debtor(SoftDeleteModel):
     email_invoice = models.EmailField(default=None, blank=True, null=True)
     email_statement = models.EmailField(default=None, blank=True, null=True)
     email_subject = models.CharField(max_length=255, default=None, blank=True, null=True)
-    billing_option = models.SmallIntegerField(choices=BillingOption, default=BillingOption.EMAIL)
+    billing_option = models.SmallIntegerField(choices=BillingOption.as_choices(), default=BillingOption.EMAIL)
     originals_required = models.BooleanField(default=False)
     credit_limit = models.DecimalField(decimal_places =2, max_digits = 10)
     credit_score = models.DecimalField(decimal_places =2, max_digits = 10)
@@ -71,18 +75,22 @@ class DebtorNote(SoftDeleteModel):
     show_client = models.BooleanField(default=False)
     
 
-class DebtorContactRole(Enum):
+class DebtorContactRole(object):
     OWNER = 1
     EMPLOYEE = 2
     ACCOUNTS_PAYABLE = 3
     DISPATCH = 4
     OTHER = 5
    
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.OWNER, "Owner"),
+            (cls.EMPLOYEE, "Employee"),
+            (cls.ACCOUNTS_PAYABLE, "Accounts Payable"),
+            (cls.DISPATCH, "Dispatch"),
+            (cls.OTHER, "Other")
+        )
     
         
 class DebtorContact(SoftDeleteModel):
@@ -102,7 +110,7 @@ class DebtorContact(SoftDeleteModel):
     email = models.EmailField(default=None, blank=True, null=True)
     is_active = models.BooleanField(default = True)
     contact_position = models.CharField(max_length=100, default=None, blank=True, null=True)
-    contact_role = models.SmallIntegerField(choices = DebtorContactRole, default=DebtorContactRole.OWNER)
+    contact_role = models.SmallIntegerField(choices = DebtorContactRole.as_choices(), default=DebtorContactRole.OWNER)
     allow_portal_access = models.BooleanField(default=False)
     portal_access_login = models.CharField(max_length=255, default=None, blank=True, null=True)
     portal_access_password = models.CharField(max_length=255, default=None, blank=True, null=True)
@@ -135,16 +143,18 @@ class SalesBroker(SoftDeleteModel):
         return reverse('sales_broker_detail', kwargs={'id':self.sales_broker_id})
         
 
-class TransactionFeeRateType(Enum):
+class TransactionFeeRateType(object):
     FLAT = 1
     DAILY = 2
     BUCKET = 3
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.FLAT, "Flat"),
+            (cls.DAILY, "Daily"),
+            (cls.BUCKET, "Bucket"),
+        )
  
 class Terms(SoftDeleteModel):
     terms_id = models.AutoField(auto_created=True, primary_key=True)
@@ -152,7 +162,7 @@ class Terms(SoftDeleteModel):
     advance_percentage = models.DecimalField(default=0, decimal_places=2, max_digits=4)
     security_percentage = models.DecimalField(default=0, decimal_places=2, max_digits=4)
     invoice_fee = models.DecimalField(default=0, decimal_places=2, max_digits=4)
-    transaction_fee_rate_type = models.SmallIntegerField(choices=TransactionFeeRateType, default=TransactionFeeRateType.FLAT) 
+    transaction_fee_rate_type = models.SmallIntegerField(choices=TransactionFeeRateType.as_choices(), default=TransactionFeeRateType.FLAT) 
     flat_rate = models.DecimalField(default=0, decimal_places=4, max_digits=6)
     daily_rate = models.DecimalField(default=0,decimal_places=4, max_digits=6)
     express_processing_fee = models.DecimalField(default=0,decimal_places=2, max_digits=4)
@@ -245,6 +255,8 @@ class Client(SoftDeleteModel):
     
     def __str__(self):
         return self.client_name
+    def default_term(self):
+        return self.terms
 
 class ClientNote(SoftDeleteModel):
     client_note_id = models.AutoField(auto_created=True, primary_key=True),
@@ -260,10 +272,18 @@ class ClientNote(SoftDeleteModel):
     show_client = models.BooleanField(default=False)
     
 
-class ClientContactType(Enum):
+class ClientContactType(object):
     OWNER = 1
     EMPLOYEE = 2
     OTHER = 3
+    
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.OWNER, "Owner"),
+            (cls.EMPLOYEE, "Employee"),
+            (cls.OTHER, "Other")
+        )
     
 class ClientContactAccount(SoftDeleteModel):
     contact_account_id = models.AutoField(auto_created=True, primary_key=True)
@@ -282,7 +302,7 @@ class ClientContactAccount(SoftDeleteModel):
     cell_phone = models.CharField(max_length=100, default=None, blank=True, null=True)
     email = models.EmailField(default=None, blank=True, null=True)
     is_active = models.BooleanField(default = True)
-    contact_type = models.SmallIntegerField(choices=ClientContactType,  default=ClientContactType.OWNER)
+    contact_type = models.SmallIntegerField(choices=ClientContactType.as_choices(),  default=ClientContactType.OWNER)
     login = models.CharField(max_length=50, default=None, blank=True, null=True)
     password = models.CharField(max_length=255, default=None, blank=True, null=True)
     pin = models.CharField(max_length=50, default=None, blank=True, null=True)
@@ -342,7 +362,7 @@ class FundingAccount(SoftDeleteModel):
     def get_absolute_url(self):
         return reverse('funding_account_detail', kwargs={'id':self.funding_account_id})
     
-class ClientDocumentType(Enum):
+class ClientDocumentType(object):
     CONTRACT = 1
     CREDIT_COMPANY = 2
     CREDIT_PERSONAL = 3
@@ -360,16 +380,31 @@ class ClientDocumentType(Enum):
     NOA = 15
     OTHER = 16
     
-    # @classmethod
-    # def choises(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.CONTRACT, "Contract"),
+            (cls.CREDIT_COMPANY, "Company Credit"),
+            (cls.CREDIT_PERSONAL, "Personal Credit"),
+            (cls.DRIVERS_LICENSE, "Drivers License"),
+            (cls.GRP, "GRP"),
+            (cls.ENTITY, "Entity"),
+            (cls.INSURANCE, "Insurance"),
+            (cls.AUTHORITY, "Authority"),
+            (cls.IRS_8821, "8821"),
+            (cls.UCC_SEARCH, "UCC Search"),
+            (cls.UCC_FILED, "UCC Filed"),
+            (cls.W9, "W9"),
+            (cls.BANKRUPTCY, "Bankruptcy"),
+            (cls.SIGNATURE, "Signature"),
+            (cls.NOA, "NOA"),
+            (cls.OTHER, "Other")
+        )
                 
 class ClientDocument(SoftDeleteModel):
     client_document_id = models.AutoField(auto_created=True, primary_key=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    document_type = models.SmallIntegerField(choices=ClientDocumentType, default=ClientDocumentType.OTHER)
+    document_type = models.SmallIntegerField(choices=ClientDocumentType.as_choices(), default=ClientDocumentType.OTHER)
     document_description = models.CharField(max_length=255, default=None, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -384,7 +419,7 @@ class NOA(SoftDeleteModel):
     noa_id = models.AutoField(auto_created=True, primary_key=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     debtor = models.ForeignKey(Debtor, on_delete=models.CASCADE)
-    terms = models.ForeignKey(Terms, on_delete=models.PROTECT, default=Client.terms_id, null=True, blank=True)
+    terms = models.ForeignKey(Terms, on_delete=models.PROTECT, default=Client.default_term, null=True, blank=True)
     is_customized = models.BooleanField(default=False)
     is_debtor_notified = models.BooleanField(default=False)
     debtor_notification_date = models.DateTimeField(default=None, blank=True, null=True)
@@ -393,19 +428,34 @@ class NOA(SoftDeleteModel):
         return reverse('noa_detail', kwargs={'id':self.noa_id})
   
   
-class PurchaseOption(Enum):
+class PurchaseOption(object):
     EXPRESS = 1
     PRIORITY = 2
     STANDARD = 3  
     
+    @classmethod
+    def as_choices(cls):
+        return(
+            (cls.EXPRESS, "Express"),
+            (cls.PRIORITY, "Priority"),
+            (cls.STANDARD, "Standard")
+        )
 
-class InvoiceStatus(Enum):
+class InvoiceStatus(object):
     PENDING = 1
     OPEN = 2
     CLOSED = 3
     
+    @classmethod
+    def as_choices(cls):
+        return(
+            (cls.PENDING, "Pending"),
+            (cls.OPEN, "Open"),
+            (cls.CLOSED, "Closed")
+        )
+    
         
-class ProcessingStage(Enum):
+class ProcessingStage(object):
     NEW = 1
     AWAITING_DOCUMENT = 2
     REDY_TO_PURCHASE = 3
@@ -416,11 +466,19 @@ class ProcessingStage(Enum):
     PURCHASED_ZERO_PCT = 8
     PURCHASED = 9
     
-    # @classmethod
-    # def choises(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.NEW, "New"),
+            (cls.AWAITING_DOCUMENT, "Awaiting Document"),
+            (cls.REDY_TO_PURCHASE, "Ready to Purchase"),
+            (cls.HELD_FOR_CREDIT, "Held for Credit"),
+            (cls.HELD_FOR_DOCUMENT, "Held for Document"),
+            (cls.FUEL_ADVANCE_REQUESTED, "Fuel Advance (Request Pending)"),
+            (cls.FUEL_ADVANCE_FUNDED, "Fuel Advance (Advanced)"),
+            (cls.PURCHASED_ZERO_PCT, "Purchased at 0 %"),
+            (cls.PURCHASED, "Funded"),
+        )
 
 class Invoice(SoftDeleteModel):
     invoice_id = models.AutoField(auto_created=True, primary_key=True)
@@ -432,10 +490,10 @@ class Invoice(SoftDeleteModel):
     total_amount = models.DecimalField(decimal_places=2, max_digits=11)
     is_fuel_advance = models.BooleanField(default=False)
     terms = models.ForeignKey(Terms, on_delete=models.PROTECT, default=None, null=True, blank=True)
-    purchase_option = models.SmallIntegerField(choices=PurchaseOption, default=PurchaseOption.STANDARD)
-    processing_stage = models.SmallIntegerField(choices=ProcessingStage, default=ProcessingStage.NEW)
+    purchase_option = models.SmallIntegerField(choices=PurchaseOption.as_choices(), default=PurchaseOption.STANDARD)
+    processing_stage = models.SmallIntegerField(choices=ProcessingStage.as_choices(), default=ProcessingStage.NEW)
     is_document_ready = models.BooleanField(default=False)
-    invoice_status = models.SmallIntegerField(choices=InvoiceStatus, default=InvoiceStatus.PENDING)
+    invoice_status = models.SmallIntegerField(choices=InvoiceStatus.as_choices(), default=InvoiceStatus.PENDING)
     date_created = models.DateTimeField(auto_now_add=True)
     created_by  = models.CharField(max_length=100, default=None, null=True, blank=True)
     date_submitted = models.DateTimeField(default=None, blank=True, null=True)
@@ -466,23 +524,27 @@ class Invoice(SoftDeleteModel):
     def get_absolute_url(self):
         return reverse('invoice_detail', kwargs={'id':self.invoice_id})
 
-class LineItem(Enum):
+class LineItem(object):
     RATE = 1
     LUMPER_FEE = 2
     DETENTION = 3
     PAID_IN_ADVANCE = 4
     OTHER = 5
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.RATE, "Rate"),
+            (cls.LUMPER_FEE, "Lumper Fee"),
+            (cls.DETENTION, "Detention"),
+            (cls.PAID_IN_ADVANCE, "Less Cash"),
+            (cls.OTHER, "Otehr")
+        )
       
 class InvoiceLineItems(SoftDeleteModel):
     invoice_line_item_id = models.AutoField(auto_created=True, primary_key=True)
     invoice = models.ForeignKey(Invoice, related_name='line_items', on_delete=models.PROTECT)
-    line_item = models.SmallIntegerField(choices=LineItem, default=LineItem.RATE)
+    line_item = models.SmallIntegerField(choices=LineItem.as_choices(), default=LineItem.RATE)
     amount = models.DecimalField(decimal_places=2, max_digits=11)
     
     def get_absolute_url(self):
@@ -495,16 +557,19 @@ class InvoiceHoldReason(object):
     DEBTOR_CREDIT = 3
     OTHER = 4
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.DOCUMENT, "Document"),
+            (cls.CLIENT_CREDIT, "Client Credit"),
+            (cls.DEBTOR_CREDIT, "Debtor Credit"),
+            (cls.OTHER, "Other")
+        )
     
 class ProcessingNote(SoftDeleteModel):
     note_id = models.AutoField(auto_created=True, primary_key=True),
     invoice = models.ForeignKey(Invoice, related_name='processing_note', on_delete = models.CASCADE)
-    hold_reason = models.SmallIntegerField(choices=InvoiceHoldReason, default=None, blank=True, null=True)
+    hold_reason = models.SmallIntegerField(choices=InvoiceHoldReason.as_choices(), default=None, blank=True, null=True)
     note = models.CharField(max_length = 255)
     is_alert = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -526,24 +591,29 @@ class BillingTask(SoftDeleteModel):
         return reverse('invoice_delivery_task_detail', kwargs={'id':self.invoice_delivery_task_id})
 
 
-class DebtorResponse(Enum):
+class DebtorResponse(object):
     EXPECTED_TO_PAY = 1
     PAID = 2
     CLAIM = 3
     DOCUMENT_ISSUE = 4
     DEBTOR_NO_PAYMENET = 5
-    OTHER = 6
+    OTHER = 6                  
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.EXPECTED_TO_PAY, "Expected to pay"),
+            (cls.PAID, "Paid"),
+            (cls.CLAIM, "Claim"),
+            (cls.DOCUMENT_ISSUE, "Document required"),
+            (cls.DEBTOR_NO_PAYMENET, "Debtor will not pay"),
+            (cls.OTHER, "Other")                  
+        )
 
 class CollectionNote(SoftDeleteModel): 
     collection_note_id = models.AutoField(auto_created=True, primary_key=True)
     invoice = models.ManyToManyField(Invoice)
-    debtor_response = models.SmallIntegerField(choices=DebtorResponse, default=DebtorResponse.OTHER)
+    debtor_response = models.SmallIntegerField(choices=DebtorResponse.as_choices(), default=DebtorResponse.OTHER)
     note = models.CharField(max_length=255, default=None, blank=True, null=True)
     payment_date = models.DateTimeField()
     
@@ -563,7 +633,7 @@ class OverAdvance(SoftDeleteModel):
         return reverse('over_advance_detail', kwargs={'id': self.over_advance_id})
     
 
-class RequestType(Enum):
+class RequestType(object):
     WIRE = 1
     ACH = 2
     CHECK = 3
@@ -571,15 +641,20 @@ class RequestType(Enum):
     FUEL_CARD = 5
     INTERNAL_TRANSFER = 6
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.WIRE, "Wire"),
+            (cls.ACH, "ACH"),
+            (cls.CHECK, "Check"),
+            (cls.TRANSCHECK, "Transcheck"),
+            (cls.FUEL_CARD, "Fuel card"),
+            (cls.INTERNAL_TRANSFER, "Internal transfer")
+        )
 
 class DisbursementRequest(SoftDeleteModel):
     request_id = models.AutoField(auto_created=True, primary_key=True)
-    request_type = models.SmallIntegerField(choices= RequestType, default=RequestType.CHECK)
+    request_type = models.SmallIntegerField(choices= RequestType.as_choices(), default=RequestType.CHECK)
     funding_account = models.ForeignKey(FundingAccount, on_delete=models.PROTECT)
     client = models.ForeignKey(Client, default=None, blank=True, null=True, on_delete=models.PROTECT)
     amount = models.DecimalField(decimal_places=2, max_digits=11)   
@@ -608,21 +683,25 @@ class Transcheck(SoftDeleteModel):
     money_code = models.CharField(max_length=50, default=None, blank=True, null=True)
 
 
-class ReceiptType(Enum):
+class ReceiptType(object):
     WIRE = 1
     ACH = 2
     CHECK = 3
+    CREDIT_CARD = 4
    
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.WIRE, "Wire"),
+            (cls.ACH, "ACH"),
+            (cls.CHECK, "Check"),
+            (cls.CREDIT_CARD, "Credit card")
+        )
     
 class Receipt(SoftDeleteModel):
     receipt_id = models.AutoField(auto_created=True, primary_key=True)
     batch_number = models.CharField(max_length=255, default=None, blank=True, null=True)
-    receipt_type = models.SmallIntegerField(choices=ReceiptType, default=ReceiptType.CHECK)
+    receipt_type = models.SmallIntegerField(choices=ReceiptType.as_choices(), default=ReceiptType.CHECK)
     client = models.ForeignKey(Client, default=None, blank=True, null=True, on_delete=models.PROTECT)
     debtor = models.ForeignKey(Debtor, default=None, blank=True, null=True, on_delete=models.PROTECT)
     amount = models.DecimalField(default=0, decimal_places=2, max_digits=11)   
@@ -648,21 +727,24 @@ class OverAdvanceNote(SoftDeleteModel):
         return reverse('over_advance_note_detail', kwargs={'id': self.over_advance_note_id})
 
 
-class MiscChargeType(Enum):
+class MiscChargeType(object):
     QUICK_PAY_FEE = 1
     PAPERWORK_DELIVERY_FEE = 2
     STOP_CHECK_FEE = 3
     OTHER = 4
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.QUICK_PAY_FEE, "Quick pay fee"),
+            (cls.PAPERWORK_DELIVERY_FEE, "Paperwork delivery fee"),
+            (cls.STOP_CHECK_FEE, "Stop check fee"),
+            (cls.OTHER, "Other")
+        )
     
 
 class MiscCharge(SoftDeleteModel):
     misc_charge_id = models.AutoField(auto_created=True, primary_key=True)
-    misc_charge_type = models.SmallIntegerField(choices=MiscChargeType, default=MiscChargeType.OTHER)
+    misc_charge_type = models.SmallIntegerField(choices=MiscChargeType.as_choices(), default=MiscChargeType.OTHER)
     amount = models.DecimalField(max_digits=11, decimal_places=2)
     note = models.CharField(max_length=255, default=None, null=True, blank=True)
     charge_date = models.DateTimeField(auto_now_add=True)
@@ -671,16 +753,18 @@ class MiscCharge(SoftDeleteModel):
         return reverse('misc_charge_detail', kwargs={'id': self.misc_charge_id})
     
 
-class AccountType(Enum):
+class AccountType(object):
     ASSET = 1
     LIABILITY = 2
     CAPITAL = 3
 
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.ASSET, "Asset"),
+            (cls.LIABILITY, "Liability"),
+            (cls.CAPITAL, "Capital")
+        )
         
         
 class Account(SoftDeleteModel):
@@ -688,10 +772,10 @@ class Account(SoftDeleteModel):
     account_number = models.CharField(max_length=100, default=None, blank=True, null=True) # Mapped account in accounting software
     account_name = models.CharField(max_length=100, default=None, blank=True, null=True)
     account_description = models.CharField(max_length=255, default=None, blank=True, null=True)
-    account_type = models.SmallIntegerField(choices=AccountType, default=None, blank=True, null=True)
+    account_type = models.SmallIntegerField(choices=AccountType.as_choices(), default=None, blank=True, null=True)
 
 
-class TransactionSource(Enum):
+class TransactionSource(object):
     INVOICE = 1
     RECEIPT = 2
     PAYMENT_APPLICATION = 3
@@ -701,53 +785,67 @@ class TransactionSource(Enum):
     PASS_THROUGH = 7
     WRITE_OFF = 8
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.INVOICE, "Invoice"),
+            (cls.RECEIPT, "Receipt"),
+            (cls.PAYMENT_APPLICATION, "Payment application"),
+            (cls.DISBURSEMENT, "Disbursement"),
+            (cls.OVER_ADVANCE, "Over advance"),
+            (cls.MISC_CHARGE, "Misc charge"),
+            (cls.PASS_THROUGH, "Pass through"),
+            (cls.WRITE_OFF, "Write off")
+        )
         
         
-class TransactionType(Enum):
-    INVOICE_PURCHASE = 1
+class TransactionType(object):
+    FUNDING = 1
     INVOICE_ADJUSTMENT = 2
     FEE_ADJUSTMENT = 3
-    CHARGE_BACK = 4
+    RECOURSE = 4
     CLOSE_OUT = 5
     RESERVE_RELEASE = 6
-    FUEL_ADVANCE = 7
-    CHARGE_BACK_OF_FUEL_ADVANCE = 8
-    RECEIPT = 9
-    PAYMENT_APPLICATION = 10
-    PAYMENT_REVERSAL = 11
-    DISBURSEMENT_REQUEST = 12
-    REVERSAL_OF_DISBURSEMENT_REQUEST =13
-    OVER_ADVANCE = 14
-    CHARGE_BACK_OF_OVER_ADVANCE = 15
-    MISC_CHARGE = 16
-    REVERSAL_OF_MISC_CHARGE = 17
-    PASS_THROUGH = 18
-    REVERSAL_OF_PASS_THROUGH = 19
-    WRITE_OFF = 20
+    RECEIPT = 7
+    PAYMENT_APPLICATION = 8
+    REVERSAL = 9
+    DISBURSEMENT_REQUEST = 10
+    MISC_CHARGE = 11
+    PASS_THROUGH = 12
+    WRITE_OFF = 13
     
-    # @classmethod
-    # def choices(cls):
-    #     return (
-    #         [(key.value, key.name) for key in cls]
-    #     )
+    @classmethod
+    def as_choices(cls):
+        return (
+            (cls.FUNDING, "Funding"),
+            (cls.INVOICE_ADJUSTMENT, "Invoice adjustment"),
+            (cls.FEE_ADJUSTMENT, "Fee adjustment"),
+            (cls.RECOURSE, "Recourse"),
+            (cls.CLOSE_OUT, "Close out"),
+            (cls.RESERVE_RELEASE, "Reserve release"),
+            (cls.RECEIPT, "Receipt"),
+            (cls.PAYMENT_APPLICATION, "Payment application"),
+            (cls.REVERSAL, "Reversal"),
+            (cls.DISBURSEMENT_REQUEST, "Dusbursement request"),
+            (cls.MISC_CHARGE, "Misc charge"),
+            (cls.PASS_THROUGH, "Pass through"),
+            (cls.WRITE_OFF, "Write off")
+        )
         
 
 
 class Transaction(SoftDeleteModel):
     transaction_id = models.AutoField(primary_key = True, auto_created = True)
-    transaction_source = models.SmallIntegerField(choices=TransactionSource)
+    transaction_source = models.SmallIntegerField(choices=TransactionSource.as_choices())
     date_created = models.DateTimeField(auto_now_add=True)
     invoice = models.ForeignKey(Invoice,default=None, blank=True, null=True, on_delete=models.CASCADE)
     receipt = models.ForeignKey(Receipt,default=None, blank=True, null=True, on_delete=models.CASCADE)
     over_advance = models.ForeignKey(OverAdvance,default=None, blank=True, null=True, on_delete=models.CASCADE)
     disbursement = models.ForeignKey(DisbursementRequest,default=None, blank=True, null=True, on_delete=models.CASCADE)
     misc_charges = models.ForeignKey(MiscCharge,default=None, blank=True, null=True, on_delete=models.CASCADE)
-    transaction_type = models.SmallIntegerField(choices=TransactionType)
+    #write_off = models.
+    #pass_through = models.
+    transaction_type = models.SmallIntegerField(choices=TransactionType.as_choices())
     transaction_note = models.CharField(max_length=255, default=None, blank=True, null=True)
     
 class Ledger(SoftDeleteModel):
