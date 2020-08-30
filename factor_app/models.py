@@ -230,12 +230,13 @@ class Client(SoftDeleteModel):
     business_start_date = models.DateField(default=None, blank=True, null=True)
     funding_start_date = models.DateField(default=None, blank=True, null=True)
     funding_end_date = models.DateField(default=None, blank=True, null=True)
-    # transaction_fee_rate_type = models.ForeignKey(TransactionFeeRateType,default=None, blank=True,null=True, on_delete=models.PROTECT)
     business_phone = models.CharField(max_length=50, default=None, blank=True, null=True)
     business_fax = models.CharField(max_length=50, default=None, blank=True, null=True)
     business_email = models.EmailField(default=None, blank=True, null=True)
     number_of_trucks = models.IntegerField(default=None, blank=True, null=True)
-    account_manager = models.ForeignKey(User, default=None, blank=True, null=True, on_delete = models.SET_NULL) # Foreign Key 
+    account_manager = models.ForeignKey(User, default=None, blank=True, null=True, on_delete = models.SET_NULL, related_name='am') # Foreign Key 
+    assigned_processor = models.ForeignKey(User, default=None, blank=True, null=True, on_delete = models.SET_NULL, related_name='assigned_processr')
+    processed_by = models.ForeignKey(User, default=None, blank=True, null=True, on_delete = models.SET_NULL, related_name='processed_by')
     primary_salesperson = models.ForeignKey(User, default=None, blank=True, null=True, on_delete = models.SET_NULL, related_name='salesperson_primary') # Foreign Key 
     secondary_salesperson = models.ForeignKey(User, default=None, blank=True, null=True, on_delete = models.SET_NULL, related_name='salesperson_secondary') # Foreign Key 
     sales_broker = models.ForeignKey(SalesBroker, default=None, blank=True, null=True, on_delete = models.SET_NULL) # Foreign Key 
@@ -765,14 +766,44 @@ class AccountType(object):
             (cls.LIABILITY, "Liability"),
             (cls.CAPITAL, "Capital")
         )
-        
-        
+ 
+ 
+class WriteOff(SoftDeleteModel):
+    write_off_id = models.AutoField(primary_key=True, auto_created=True)
+    client = models.ForeignKey(Client, default=None, blank=True, null=True, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=11, decimal_places=2)
+    reason = models.CharField(max_length = 50, default=None, blank=True, null=True)
+    description = models.CharField(max_length = 255, default=None, blank=True, null=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)
+    
+class PassThrough(SoftDeleteModel):
+    pass_through_id = models.AutoField(primary_key=True, auto_created=True)
+    receipt = models.ForeignKey(Receipt, default=None, blank=True, null=True, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=11, decimal_places=2)
+    fee = models.DecimalField(max_digits=11, decimal_places=2)
+    reason = models.CharField(max_length = 50, default=None, blank=True, null=True)
+    description = models.CharField(max_length = 255, default=None, blank=True, null=True)
+    beneficiary = models.CharField(max_length=255, default=None, blank=True, null=True)
+    address_1 = models.CharField(max_length=50, default=None, blank=True, null=True)
+    address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
+    city = models.CharField(max_length=50, default=None, blank=True, null=True)
+    state = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    country = models.CharField(max_length=50, default=None, blank=True, null=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)    
+       
+      
 class Account(SoftDeleteModel):
     account_id = models.AutoField(primary_key = True, auto_created = True)
     account_number = models.CharField(max_length=100, default=None, blank=True, null=True) # Mapped account in accounting software
     account_name = models.CharField(max_length=100, default=None, blank=True, null=True)
     account_description = models.CharField(max_length=255, default=None, blank=True, null=True)
     account_type = models.SmallIntegerField(choices=AccountType.as_choices(), default=None, blank=True, null=True)
+    
+    def __str__(self):
+        return self.account_name
 
 
 class TransactionSource(object):
@@ -834,6 +865,7 @@ class TransactionType(object):
         
 
 
+
 class Transaction(SoftDeleteModel):
     transaction_id = models.AutoField(primary_key = True, auto_created = True)
     transaction_source = models.SmallIntegerField(choices=TransactionSource.as_choices())
@@ -843,17 +875,39 @@ class Transaction(SoftDeleteModel):
     over_advance = models.ForeignKey(OverAdvance,default=None, blank=True, null=True, on_delete=models.CASCADE)
     disbursement = models.ForeignKey(DisbursementRequest,default=None, blank=True, null=True, on_delete=models.CASCADE)
     misc_charges = models.ForeignKey(MiscCharge,default=None, blank=True, null=True, on_delete=models.CASCADE)
-    #write_off = models.
-    #pass_through = models.
+    write_off = models.ForeignKey(WriteOff,default=None, blank=True, null=True, on_delete=models.CASCADE)
+    pass_through = models.ForeignKey(PassThrough,default=None, blank=True, null=True, on_delete=models.CASCADE)
     transaction_type = models.SmallIntegerField(choices=TransactionType.as_choices())
     transaction_note = models.CharField(max_length=255, default=None, blank=True, null=True)
     
 class Ledger(SoftDeleteModel):
     ledger_id = models.AutoField(primary_key = True, auto_created = True)
-    Transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE)
+    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=11, decimal_places=2)
     credit = models.DecimalField(max_digits=11, decimal_places=2)
     debit = models.DecimalField(max_digits=11, decimal_places=2)
  
  
+ 
+class Processing(models.Model):
+    p_id = models.AutoField(primary_key=True)
+    client = models.ForeignKey(Client, on_delete=models.DO_NOTHING)
+    client_name = models.CharField(max_length=100)
+    inv_cnt = models.IntegerField
+    standard = models.DecimalField(max_digits=10,decimal_places=2)
+    priority = models.DecimalField(max_digits=10,decimal_places=2)
+    express = models.DecimalField(max_digits=10,decimal_places=2)
+    account_manager = models.ForeignKey(User, default=None, null=True, blank=True, on_delete=models.DO_NOTHING)
+    am = models.CharField(max_length=100,default=None, null=True, blank=True)
+    due_at = models.DateTimeField(default=None, null=True, blank=True)
+    processing_stage = models.SmallIntegerField()
+    
+    class Meta:
+        managed = False
+        db_table = "vw_processing"
+        
+    def get_client(self):
+        return this.client
+    
+    
