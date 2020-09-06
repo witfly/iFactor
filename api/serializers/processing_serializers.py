@@ -1,11 +1,19 @@
 from rest_framework import serializers
-from factor_app.models import Processing, Client, Terms, Invoice, InvoiceLineItems
+from factor_app.models import Client, Terms, Invoice, InvoiceLineItems
 
 
-class ProcessingSerializer(serializers.ModelSerializer):
+''' class ProcessingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Processing
+        fields = ('__all__') '''
+class ProcessingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Invoice
         fields = ('__all__')
+
+class PendingApprovedProcessedSerializer(serializers.Serializer):
+    pending = ProcessingSerializer(many=True)
+    approved = ProcessingSerializer(many=True)
         
         
 class ProcessingInvoiceSerializer(serializers.ModelSerializer):

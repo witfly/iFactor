@@ -5,17 +5,18 @@ from rest_framework.pagination import LimitOffsetPagination
 # from rest_framework import django_filters
 # from rest_framework.response import response
 from rest_framework import status
-from factor_app.models import Processing, Client, Invoice
+from factor_app.models import Client, Invoice
 from ..serializers.processing_serializers import (
     ProcessingSerializer, ProcessingClientInvoiceSerializer,ProcessingTermSerializer,ProcessingInvoiceDetailSerializer
 )
 
 class ProcessingListView(ListAPIView):
-    serializer_class = ProcessingSerializer
-    context_object_name = 'client_pending_purchase_summary'
-    def get_queryset(self):
-        return Processing.objects.all()
-    
+    pass
+    #serializer_class = ProcessingSerializer
+    #context_object_name = 'client_pending_purchase_summary'
+    #def get_queryset(self):
+    #    return Processing.objects.all()
+            
     
 class ProcessingClientInvoicesListView(ListAPIView):
     queryset = Client.objects.all()

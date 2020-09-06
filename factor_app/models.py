@@ -1,6 +1,11 @@
 from django.db import models
+from django.db.models import Count, Q, Sum
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from soft_delete_it.models import SoftDeleteModel
 from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
 
 class BillingOption(object):
     EMAIL = 1
@@ -41,7 +46,7 @@ class Debtor(SoftDeleteModel):
     address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
     city = models.CharField(max_length=50, default=None, blank=True, null=True)
     state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     country = models.CharField(max_length=50, default=None, blank=True, null=True)
     business_phone = models.CharField(max_length=50, default=None, blank=True, null=True)
     business_fax = models.CharField(max_length=50, default=None, blank=True, null=True)
@@ -103,7 +108,7 @@ class DebtorContact(SoftDeleteModel):
     address_2 = models.CharField(max_length=100, default=None, blank=True, null=True)
     city  = models.CharField(max_length=100, default=None, blank=True, null=True)
     state = models.CharField(max_length=100, default=None, blank=True, null=True)
-    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     country = models.CharField(max_length=100, default=None, blank=True, null=True)
     phone = models.CharField(max_length=100, default=None, blank=True, null=True)
     cell_phone = models.CharField(max_length=100, default=None, blank=True, null=True)
@@ -213,13 +218,13 @@ class Client(SoftDeleteModel):
     address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
     city = models.CharField(max_length=50, default=None, blank=True, null=True)
     state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     country = models.CharField(max_length=50, default=None, blank=True, null=True)
     mailing_address_1 = models.CharField(max_length=255, default=None, blank=True, null=True)
     mailing_address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
     mailing_city = models.CharField(max_length=50, default=None, blank=True, null=True)
     mailing_state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    mailing_zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    mailing_zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     mailing_country = models.CharField(max_length=50, default=None, blank=True, null=True)
     is_active = models.BooleanField(default = True)
     docket = models.CharField(max_length=50, default=None, blank=True, null=True)
@@ -297,7 +302,7 @@ class ClientContactAccount(SoftDeleteModel):
     address_2 = models.CharField(max_length=100, default=None, blank=True, null=True)
     city  = models.CharField(max_length=100, default=None, blank=True, null=True)
     state = models.CharField(max_length=100, default=None, blank=True, null=True)
-    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     country = models.CharField(max_length=100, default=None, blank=True, null=True)
     phone = models.CharField(max_length=100, default=None, blank=True, null=True)
     cell_phone = models.CharField(max_length=100, default=None, blank=True, null=True)
@@ -336,7 +341,7 @@ class FundingAccount(SoftDeleteModel):
     address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
     city = models.CharField(max_length=50, default=None, blank=True, null=True)
     state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     country = models.CharField(max_length=50, default=None, blank=True, null=True)
     bank_name = models.CharField(max_length=50, default=None, blank=True, null=True)
     bank_routing_number = models.CharField(max_length=50, default=None, blank=True, null=True)
@@ -345,7 +350,7 @@ class FundingAccount(SoftDeleteModel):
     bank_address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
     bank_city = models.CharField(max_length=50, default=None, blank=True, null=True)
     bank_state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    bank_zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    bank_zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     bank_country = models.CharField(max_length=50, default=None, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     is_fuel_card = models.BooleanField(default=False)
@@ -427,7 +432,30 @@ class NOA(SoftDeleteModel):
     
     def get_absolute_url(self):
         return reverse('noa_detail', kwargs={'id':self.noa_id})
-  
+
+ 
+ 
+class Processing(models.QuerySet):
+    def total_invoice_count(self, total):
+        return self.filter(total_count)
+
+    '''     p_id = models.AutoField(primary_key=True)
+    client = models.ForeignKey(Client, on_delete=models.DO_NOTHING)
+    client_name = models.CharField(max_length=100)
+    inv_cnt = models.IntegerField
+    standard = models.DecimalField(max_digits=10,decimal_places=2)
+    priority = models.DecimalField(max_digits=10,decimal_places=2)
+    express = models.DecimalField(max_digits=10,decimal_places=2)
+    account_manager = models.ForeignKey(User, default=None, null=True, blank=True, on_delete=models.DO_NOTHING)
+    am = models.CharField(max_length=100,default=None, null=True, blank=True)
+    due_at = models.DateTimeField(default=None, null=True, blank=True)
+    processing_stage = models.SmallIntegerField()
+    related_name='processing' '''
+
+
+        
+    def get_client(self):
+        return this.client  
   
 class PurchaseOption(object):
     EXPRESS = 1
@@ -511,19 +539,61 @@ class Invoice(SoftDeleteModel):
     pickup_address = models.CharField(max_length=255, default=None, blank=True, null=True)
     pickup_city = models.CharField(max_length=50, default=None, blank=True, null=True)
     pickup_state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    pickup_zip =  models.CharField(max_length=50, default=None, blank=True, null=True)
+    pickup_zipcode =  models.CharField(max_length=50, default=None, blank=True, null=True)
     delivery_date = models.DateTimeField(default=None, blank=True, null=True)
     delivery_address = models.CharField(max_length=255, default=None, blank=True, null=True)
     delivery_city = models.CharField(max_length=50, default=None, blank=True, null=True)
     delivery_state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    delivery_zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    delivery_zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     memo = models.CharField(max_length=255, default=None, blank=True, null=True)
     document_path = models.CharField(max_length=255, default=None, blank=True, null=True)
     document_file_name = models.CharField(max_length=255, default=None, blank=True, null=True)
     noa = models.ForeignKey(NOA, on_delete=models.PROTECT)
     billing_status = models.BooleanField(default=False)
-    def get_absolute_url(self):
-        return reverse('invoice_detail', kwargs={'id':self.invoice_id})
+    basket_items = GenericRelation(
+        'ProcessingItem',
+        'invoice_object_id',
+        'invoice_content_type_id',
+        related_query_name='invoices',
+    )
+
+
+    class Meta:
+        ordering = ['-date_created']
+
+
+    def __str__(self):
+        return str(self.invoice_number)
+
+class Basket(models.Model):
+    user = models.OneToOneField(
+    get_user_model(),primary_key=True,on_delete=models.CASCADE,)
+    
+    def add_item(self, invoice) -> 'ProcessingItem':
+        invoice_content_type = ContentType.objects.get_for_model(invoice)
+        return CartItem.objects.create(
+            cart=self,
+            invoice_content_type=product_content_type,
+            invoice_object_id=product.pk,
+        )
+
+class ProcessingItem(models.Model):
+    buscket = models.ForeignKey(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name='invoices',
+    )
+    invoice_object_id = models.IntegerField()
+    invoice_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.PROTECT,
+    )
+    invoice = GenericForeignKey(
+        'invoice_content_type',
+        'invoice_object_id',
+    )
+
+     
 
 class LineItem(object):
     RATE = 1
@@ -776,7 +846,8 @@ class WriteOff(SoftDeleteModel):
     description = models.CharField(max_length = 255, default=None, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)
-    
+     
+
 class PassThrough(SoftDeleteModel):
     pass_through_id = models.AutoField(primary_key=True, auto_created=True)
     receipt = models.ForeignKey(Receipt, default=None, blank=True, null=True, on_delete=models.CASCADE)
@@ -789,11 +860,10 @@ class PassThrough(SoftDeleteModel):
     address_2 = models.CharField(max_length=50, default=None, blank=True, null=True)
     city = models.CharField(max_length=50, default=None, blank=True, null=True)
     state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    zip = models.CharField(max_length=50, default=None, blank=True, null=True)
+    zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
     country = models.CharField(max_length=50, default=None, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)    
-       
+    created_by = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)     
       
 class Account(SoftDeleteModel):
     account_id = models.AutoField(primary_key = True, auto_created = True)
@@ -887,27 +957,5 @@ class Ledger(SoftDeleteModel):
     amount = models.DecimalField(max_digits=11, decimal_places=2)
     credit = models.DecimalField(max_digits=11, decimal_places=2)
     debit = models.DecimalField(max_digits=11, decimal_places=2)
- 
- 
- 
-class Processing(models.Model):
-    p_id = models.AutoField(primary_key=True)
-    client = models.ForeignKey(Client, on_delete=models.DO_NOTHING)
-    client_name = models.CharField(max_length=100)
-    inv_cnt = models.IntegerField
-    standard = models.DecimalField(max_digits=10,decimal_places=2)
-    priority = models.DecimalField(max_digits=10,decimal_places=2)
-    express = models.DecimalField(max_digits=10,decimal_places=2)
-    account_manager = models.ForeignKey(User, default=None, null=True, blank=True, on_delete=models.DO_NOTHING)
-    am = models.CharField(max_length=100,default=None, null=True, blank=True)
-    due_at = models.DateTimeField(default=None, null=True, blank=True)
-    processing_stage = models.SmallIntegerField()
-    
-    class Meta:
-        managed = False
-        db_table = "vw_processing"
-        
-    def get_client(self):
-        return this.client
-    
-    
+
+
