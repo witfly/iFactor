@@ -5,6 +5,8 @@ from django.contrib.contenttypes.models import ContentType
 from soft_delete_it.models import SoftDeleteModel
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
+from functools import cached_property 
+
 
 
 class BillingOption(object):
@@ -123,7 +125,6 @@ class DebtorContact(SoftDeleteModel):
     def get_absolute_url(self):
         return reverse('debtor_contact_detail', kwargs={'id': self.contact_id})
     
-
 
 class SalesBroker(SoftDeleteModel):
     sales_broker_id = models.AutoField(primary_key = True, auto_created = True)
@@ -255,14 +256,30 @@ class Client(SoftDeleteModel):
     insurance_expiration_date = models.DateField()
     ucc_filing_date = models.DateField()
     date_created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Client"
+        verbose_name_plural = "Clients"
     
     def get_absolute_url(self):
         return reverse('client_detail', kwargs={'id':self.client_id})
     
     def __str__(self):
         return self.client_name
-    def default_term(self):
-        return self.terms
+
+    # def default_term(self):
+    #     return self._get_default(term)
+
+    @cached_property
+    def _get_default(self):
+        if self.has_default():
+            if callable(self.default):
+                return self.default
+            return lambda: self.default
+
+        if not self.empty_strings_allowed or self.null and not connection.features.interprets_empty_strings_as_nulls:
+            return return_None
+        return str(self.term)  # return empty string
 
 class ClientNote(SoftDeleteModel):
     client_note_id = models.AutoField(auto_created=True, primary_key=True),
@@ -425,13 +442,20 @@ class NOA(SoftDeleteModel):
     noa_id = models.AutoField(auto_created=True, primary_key=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     debtor = models.ForeignKey(Debtor, on_delete=models.CASCADE)
-    terms = models.ForeignKey(Terms, on_delete=models.PROTECT, default=Client.default_term, null=True, blank=True)
+    terms = models.ForeignKey(Terms, on_delete=models.PROTECT, blank=True)
     is_customized = models.BooleanField(default=False)
     is_debtor_notified = models.BooleanField(default=False)
     debtor_notification_date = models.DateTimeField(default=None, blank=True, null=True)
-    
+    slug = models.SlugField(max_length=255, unique=True)
+
     def get_absolute_url(self):
-        return reverse('noa_detail', kwargs={'id':self.noa_id})
+        self.slug = slugify(str(self.noa_id))
+        return reverse('noa_detail', kwargs={'id': self.slug})
+
+    def __str__(self):
+        self.slug = slugify(str(self.noa_id))
+        return str(self.slug)
+        
 
  
  
@@ -571,29 +595,17 @@ class Basket(models.Model):
     
     def add_item(self, invoice) -> 'ProcessingItem':
         invoice_content_type = ContentType.objects.get_for_model(invoice)
-        return CartItem.objects.create(
-            cart=self,
-            invoice_content_type=product_content_type,
-            invoice_object_id=product.pk,
+        return ProcessingItem.objects.create(
+            basket=self,
+            invoice_content_type=invoice_content_type,
+            invoice_object_id=invoice.pk,
         )
 
 class ProcessingItem(models.Model):
-    buscket = models.ForeignKey(
-        Invoice,
-        on_delete=models.CASCADE,
-        related_name='invoices',
-    )
+    buscket = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='invoices',)
     invoice_object_id = models.IntegerField()
-    invoice_content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.PROTECT,
-    )
-    invoice = GenericForeignKey(
-        'invoice_content_type',
-        'invoice_object_id',
-    )
-
-     
+    invoice_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT,)
+    invoice = GenericForeignKey('invoice_content_type','invoice_object_id',)
 
 class LineItem(object):
     RATE = 1
