@@ -2,8 +2,8 @@ from django.shortcuts import render
 from django.conf.urls import url
 from django.urls import path, include, re_path
 from rest_framework.urlpatterns import format_suffix_patterns
-from  api.views.processing_views import ProcessingListView, ProcessingClientInvoicesListView, ProcessingInvoiceDetailView
-from api.views.invoice_views import InvoiceViewSet
+from factor_app.api.views.processing_views import ProcessingListView, ProcessingClientInvoicesListView, ProcessingInvoiceDetailView
+from factor_app.api.views.invoice_views import InvoiceViewSet
 
 urlpatterns = [
     
