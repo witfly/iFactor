@@ -29,5 +29,4 @@ def search(request):
     #total[0].invoice_total
     invoice_filter = InvoiceFilter(request.GET, queryset=invoice_list)
     #invoice_total = InvoiceFilter(request.GET, queryset=total)
-
     return render(request, 'search/invoice_list.html', {'filter': invoice_filter, 'total': total})
