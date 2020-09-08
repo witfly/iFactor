@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <form method="get">
+    {{ filter.form.as_p }}
+    <button type="submit">Search</button>
+  </form>
+  <ul>
+  {% for invoice in filter.qs %}
+    <li>{{ invoice.invoice_number }} </li>
+    <li>{{ invoice.total_amount}}</li>
+  {% endfor %}
+  <div> Total amount:  {{ total}} </div>
+  </ul>
+{% endblock %}

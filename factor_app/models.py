@@ -1,11 +1,8 @@
 from django.db import models
 from django.db.models import Count, Q, Sum
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from soft_delete_it.models import SoftDeleteModel
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
-from functools import cached_property 
 
 
 
@@ -37,7 +34,7 @@ class DebtorStatus(object):
             (cls.DO_NOT_PURCHASE, "No Load")
         )
 
-class Debtor(SoftDeleteModel):
+class Debtor(SoftDeleteModel, models.Model):
     debtor_id = models.AutoField(auto_created=True, primary_key=True)
     parent = models.ForeignKey('self', default=None, blank=True, null=True, on_delete = models.SET_NULL)
     name = models.CharField(max_length=255)
@@ -162,7 +159,7 @@ class TransactionFeeRateType(object):
             (cls.BUCKET, "Bucket"),
         )
  
-class Terms(SoftDeleteModel):
+class Terms(SoftDeleteModel, models.Model):
     terms_id = models.AutoField(auto_created=True, primary_key=True)
     description = models.CharField(max_length= 255, default=None, null=True, blank=True)
     advance_percentage = models.DecimalField(default=0, decimal_places=2, max_digits=4)
@@ -210,7 +207,7 @@ class BucketRate(SoftDeleteModel):
     def get_absolute_url(self):
         return reverse('bucket_rate_detail', kwargs={'id':self.bucket_rate_id})
 
-class Client(SoftDeleteModel):
+class Client(SoftDeleteModel, models.Model):
     client_id = models.AutoField(auto_created=True, primary_key=True)
     debtor = models.ManyToManyField(Debtor, through='NOA')
     client_name = models.CharField(max_length=255)
@@ -269,17 +266,6 @@ class Client(SoftDeleteModel):
 
     # def default_term(self):
     #     return self._get_default(term)
-
-    @cached_property
-    def _get_default(self):
-        if self.has_default():
-            if callable(self.default):
-                return self.default
-            return lambda: self.default
-
-        if not self.empty_strings_allowed or self.null and not connection.features.interprets_empty_strings_as_nulls:
-            return return_None
-        return str(self.term)  # return empty string
 
 class ClientNote(SoftDeleteModel):
     client_note_id = models.AutoField(auto_created=True, primary_key=True),
@@ -436,9 +422,7 @@ class ClientDocument(SoftDeleteModel):
     file_size = models.CharField(max_length=50, default=None, blank=True, null=True)
     
     
-
-
-class NOA(SoftDeleteModel):
+class NOA(models.Model):
     noa_id = models.AutoField(auto_created=True, primary_key=True)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     debtor = models.ForeignKey(Debtor, on_delete=models.CASCADE)
@@ -446,40 +430,13 @@ class NOA(SoftDeleteModel):
     is_customized = models.BooleanField(default=False)
     is_debtor_notified = models.BooleanField(default=False)
     debtor_notification_date = models.DateTimeField(default=None, blank=True, null=True)
-    slug = models.SlugField(max_length=255, unique=True)
 
     def get_absolute_url(self):
-        self.slug = slugify(str(self.noa_id))
-        return reverse('noa_detail', kwargs={'id': self.slug})
+        return reverse('noa_detail', kwargs={'id': str(self.noa_id)})
 
     def __str__(self):
-        self.slug = slugify(str(self.noa_id))
-        return str(self.slug)
-        
-
- 
- 
-class Processing(models.QuerySet):
-    def total_invoice_count(self, total):
-        return self.filter(total_count)
-
-    '''     p_id = models.AutoField(primary_key=True)
-    client = models.ForeignKey(Client, on_delete=models.DO_NOTHING)
-    client_name = models.CharField(max_length=100)
-    inv_cnt = models.IntegerField
-    standard = models.DecimalField(max_digits=10,decimal_places=2)
-    priority = models.DecimalField(max_digits=10,decimal_places=2)
-    express = models.DecimalField(max_digits=10,decimal_places=2)
-    account_manager = models.ForeignKey(User, default=None, null=True, blank=True, on_delete=models.DO_NOTHING)
-    am = models.CharField(max_length=100,default=None, null=True, blank=True)
-    due_at = models.DateTimeField(default=None, null=True, blank=True)
-    processing_stage = models.SmallIntegerField()
-    related_name='processing' '''
-
-
-        
-    def get_client(self):
-        return this.client  
+        return str(self.noa_id)
+         
   
 class PurchaseOption(object):
     EXPRESS = 1
@@ -533,9 +490,9 @@ class ProcessingStage(object):
             (cls.PURCHASED, "Funded"),
         )
 
-class Invoice(SoftDeleteModel):
+class Invoice(models.Model):
     invoice_id = models.AutoField(auto_created=True, primary_key=True)
-    client = models.ForeignKey(Client, on_delete=models.PROTECT)
+    total_amount = models.ForeignKey(Client, on_delete=models.PROTECT)
     debtor = models.ForeignKey(Debtor, on_delete=models.PROTECT)
     invoice_number = models.CharField(max_length=50, default=None, blank=True, null=True)
     load_number = models.CharField(max_length=255, default=None, blank=True, null=True)
@@ -574,38 +531,13 @@ class Invoice(SoftDeleteModel):
     document_file_name = models.CharField(max_length=255, default=None, blank=True, null=True)
     noa = models.ForeignKey(NOA, on_delete=models.PROTECT)
     billing_status = models.BooleanField(default=False)
-    basket_items = GenericRelation(
-        'ProcessingItem',
-        'invoice_object_id',
-        'invoice_content_type_id',
-        related_query_name='invoices',
-    )
 
 
     class Meta:
         ordering = ['-date_created']
 
-
     def __str__(self):
         return str(self.invoice_number)
-
-class Basket(models.Model):
-    user = models.OneToOneField(
-    get_user_model(),primary_key=True,on_delete=models.CASCADE,)
-    
-    def add_item(self, invoice) -> 'ProcessingItem':
-        invoice_content_type = ContentType.objects.get_for_model(invoice)
-        return ProcessingItem.objects.create(
-            basket=self,
-            invoice_content_type=invoice_content_type,
-            invoice_object_id=invoice.pk,
-        )
-
-class ProcessingItem(models.Model):
-    buscket = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='invoices',)
-    invoice_object_id = models.IntegerField()
-    invoice_content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT,)
-    invoice = GenericForeignKey('invoice_content_type','invoice_object_id',)
 
 class LineItem(object):
     RATE = 1
@@ -945,8 +877,6 @@ class TransactionType(object):
             (cls.WRITE_OFF, "Write off")
         )
         
-
-
 
 class Transaction(SoftDeleteModel):
     transaction_id = models.AutoField(primary_key = True, auto_created = True)

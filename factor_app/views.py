@@ -27,5 +27,9 @@ def home(request):
 
 def search(request):
     invoice_list = Invoice.objects.all()
+    total = Invoice.objects.aggregate(invoice_total=Sum('total_amount',output_field=FloatField()))
+    #total[0].invoice_total
     invoice_filter = InvoiceFilter(request.GET, queryset=invoice_list)
-    return render(request, 'search/invoice_list.html', {'filter': invoice_filter})
+    #invoice_total = InvoiceFilter(request.GET, queryset=total)
+
+    return render(request, 'search/invoice_list.html', {'filter': invoice_filter, 'total': total})

@@ -15,10 +15,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
-
+from django.conf.urls import url
+from factor_app import views
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path('api/', include('factor_app.urls')),
+    #re_path('api/', include('factor_app.urls')),
+    url(r'^$', views.home, name='home'),
+    url(r'^search/$', views.search, name='search'),
 ]
