@@ -14,16 +14,14 @@ def home(request):
     total_amount = 0.00
     
     for invoice in invoice:
-      
+  
     #response_html = '<br>'.join(invoice_number, invoiceamount)
-
         invoice_number.append(invoice.invoice_number)
 
     response_html = '<br>'.join(map(str, invoice_number))
     #resp_html = '<div>'.join(str(Invoice.objects.values('total_amount').aggregate(Sum('total_amount',output_field=FloatField()))))
     
     return HttpResponse(response_html)
-
 
 def search(request):
     invoice_list = Invoice.objects.all()
