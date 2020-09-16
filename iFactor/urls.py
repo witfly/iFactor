@@ -24,4 +24,8 @@ urlpatterns = [
     #re_path('api/', include('factor_app.urls')),
     url(r'^$', views.home, name='home'),
     url(r'^search/$', views.search, name='search'),
+    path('clients/', views.ClientListView.as_view(), name='client_list'),
+    path('clients/<pk>/', views.ClientDetailView.as_view(), name='client_detail'),
+    path('invoice/', views.InvoiceListView.as_view(), name='invoice_list'),
+    path('invoice/<pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail')
 ]

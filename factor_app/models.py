@@ -1,10 +1,11 @@
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Count, Q, Sum
 from soft_delete_it.models import SoftDeleteModel
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
-
-
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import ugettext_lazy as _
+#from .queryset import InvoiceQuerySet, InvoiceItemQuerySet
 
 class BillingOption(object):
     EMAIL = 1
@@ -492,6 +493,7 @@ class ProcessingStage(object):
 
 class Invoice(models.Model):
     invoice_id = models.AutoField(auto_created=True, primary_key=True)
+    #sequence = models.IntegerField(_(u'sequence'), db_index=True, blank=True)
     total_amount = models.ForeignKey(Client, on_delete=models.PROTECT)
     debtor = models.ForeignKey(Debtor, on_delete=models.PROTECT)
     invoice_number = models.CharField(max_length=50, default=None, blank=True, null=True)
@@ -520,24 +522,33 @@ class Invoice(models.Model):
     pickup_address = models.CharField(max_length=255, default=None, blank=True, null=True)
     pickup_city = models.CharField(max_length=50, default=None, blank=True, null=True)
     pickup_state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    pickup_zipcode =  models.CharField(max_length=50, default=None, blank=True, null=True)
+    pickup_zip =  models.CharField(max_length=50, default=None, blank=True, null=True)
     delivery_date = models.DateTimeField(default=None, blank=True, null=True)
     delivery_address = models.CharField(max_length=255, default=None, blank=True, null=True)
     delivery_city = models.CharField(max_length=50, default=None, blank=True, null=True)
     delivery_state = models.CharField(max_length=50, default=None, blank=True, null=True)
-    delivery_zipcode = models.CharField(max_length=50, default=None, blank=True, null=True)
+    delivery_zip = models.CharField(max_length=50, default=None, blank=True, null=True)
     memo = models.CharField(max_length=255, default=None, blank=True, null=True)
     document_path = models.CharField(max_length=255, default=None, blank=True, null=True)
     document_file_name = models.CharField(max_length=255, default=None, blank=True, null=True)
     noa = models.ForeignKey(NOA, on_delete=models.PROTECT)
     billing_status = models.BooleanField(default=False)
 
-
     class Meta:
-        ordering = ['-date_created']
+        ordering = ['-date_created', 'invoice_id']
 
     def __str__(self):
         return str(self.invoice_number)
+
+
+    # @transaction.atomic
+    # def save(self, **kwargs):
+    #     if self.sequence in EMPTY_VALUES:
+    #         self.sequence = Invoice.get_next_sequence(self.invoice_status, self.date_submitted, getattr(self, 'number_prefix', None))
+    #     if self.number in EMPTY_VALUES:
+    #         self.invoice_number = self._get_number(getattr(self, 'number_format', None))
+
+    #     return super(Invoice, self).save(**kwargs)
 
 class LineItem(object):
     RATE = 1
@@ -556,7 +567,7 @@ class LineItem(object):
             (cls.OTHER, "Otehr")
         )
       
-class InvoiceLineItems(SoftDeleteModel):
+class InvoiceLineItems(models.Model):
     invoice_line_item_id = models.AutoField(auto_created=True, primary_key=True)
     invoice = models.ForeignKey(Invoice, related_name='line_items', on_delete=models.PROTECT)
     line_item = models.SmallIntegerField(choices=LineItem.as_choices(), default=LineItem.RATE)

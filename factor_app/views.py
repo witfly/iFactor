@@ -4,8 +4,12 @@ from decimal import *
 from .filters import InvoiceFilter
 
 from django.http import HttpResponse
-from .models import Invoice
+from .models import Invoice, Client
 from django.db.models import FloatField
+from rest_framework.viewsets import ModelViewSet
+from factor_app.api.serializers import ClientDetailSerializer, InvoiceDetailSerializer
+from rest_framework import generics
+
 
 def home(request):
     invoice = Invoice.objects.all()
@@ -30,3 +34,19 @@ def search(request):
     invoice_filter = InvoiceFilter(request.GET, queryset=invoice_list)
     #invoice_total = InvoiceFilter(request.GET, queryset=total)
     return render(request, 'search/invoice_list.html', {'filter': invoice_filter, 'total': total})
+
+
+class ClientListView(generics.ListAPIView):
+    queryset = Client.objects.all()
+    serializer_class = ClientDetailSerializer
+
+class ClientDetailView(generics.RetrieveAPIView):
+    queryset = Client.objects.all()
+    serializer_class = ClientDetailSerializer
+
+class InvoiceListView(generics.ListAPIView):
+    queryset = Invoice.objects.all()
+    serializer_class = InvoiceDetailSerializer
+class InvoiceDetailView(generics.RetrieveAPIView):
+    queryset = Invoice.objects.all()
+    serializer_class = InvoiceDetailSerializer
